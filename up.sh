@@ -10,8 +10,7 @@ included_routes="/pss/wg_client_included_routes"
 $LOG "WireGuard custom routes script: started"
 
 $LOG "Waiting for $iface"
-until ip route | grep "default dev $iface"; do sleep 1; done
-ip route del default dev "$iface"
+until ip addr show $iface up; do sleep 1; done
 
 $LOG "Adding routes"
 if [ -s "$included_routes" ]; then
