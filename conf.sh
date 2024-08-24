@@ -4,7 +4,7 @@ wg_config="/tmp/wg-client-autoconf"
 fw_min_date="20220601"
 
 wg_up_dir="/pss/wg-up.d"
-repo="https://github.com/shvchk/wive-wireguard-autoconf"
+repo="https://github.com/diablo-adg/wive-wireguard-autoconf"
 raw_files_url="${repo}/raw/main"
 custom_routes_script_path="${wg_up_dir}/10-custom-routes"
 custom_routes_script_url="${raw_files_url}/up.sh"
