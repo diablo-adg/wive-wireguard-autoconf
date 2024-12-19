@@ -147,7 +147,7 @@
 6. Запусти программу автонастройки клиента WireGuard:
 
     ```sh
-    wget -qO- https://github.com/shvchk/wive-wireguard-autoconf/raw/main/conf.sh | sh
+    wget -qO- https://github.com/diablo-adg/wive-wireguard-autoconf/raw/main/conf.sh | sh
     ```
 
 7. Программа проверит, не устарело ли ПО роутера, и при необходимости потребует его обновить. После обновления ПО роутер автоматически перезагрузится и SSH соединение с ним будет разорвано, тогда необходимо будет вернуться к п. 1 этого раздела инструкции.
