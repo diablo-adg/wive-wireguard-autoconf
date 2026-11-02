@@ -163,7 +163,7 @@ check_wg_connection() {
 }
 
 setup_custom_routing() {
-  mkdir "$wg_up_dir"
+  mkdir -p "$wg_up_dir"
   $wget "$custom_routes_script_url" -qO "$custom_routes_script_path"
   $wget "$included_routes_url" -qO "$included_routes_path"
   chmod +x "$custom_routes_script_path"
@@ -174,12 +174,8 @@ setup_custom_routing() {
   fi
 
   echo
-  echo "Рекомендуем добавить на роутере следующие локальные записи DNS:"
-  echo
-  cat "$included_routes_path" | sed -n '/# Hosts/,/# ---*/{/^#/d;s/#//;/^[0-9]/p}'
-  echo
-  echo "Сделать это можно по ссылке http://$(nvram_get lan_ipaddr)/#services/dns.asp"
-  echo "или в разделе Сервисы > Службы DNS > Локальные записи DNS"
+  echo "Список адресов YouTube будет обновляться автоматически: при каждом подключении WireGuard"
+  echo "и раз в 6 часов (задание планировщика ставится само, планировщик включается)"
 }
 
 echo
