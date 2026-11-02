@@ -13,7 +13,6 @@ iface="wgcli0"
 url="https://github.com/diablo-adg/wive-wireguard-autoconf/raw/main/included_routes"
 saved="/pss/wg_client_included_routes"
 fresh="/tmp/wg_client_included_routes"
-applied="/tmp/wg_client_routes_applied"
 self="/pss/wg-up.d/10-custom-routes"
 crontab="/etc/crontabs/root"
 min_routes=50
@@ -31,7 +30,6 @@ else
     sleep 1; n=$((n + 1))
     [ "$n" -ge 120 ] && { $LOG "$iface is not up after 120 s, giving up"; exit 1; }
   done
-  rm -f "$applied"                    # интерфейс только что поднялся — маршрутов на нём нет, ставим все
 fi
 
 # 1. свежий список (не скачался или подозрительно короткий — прошлый скачанный, иначе копия из /pss)
@@ -47,20 +45,24 @@ fi
 [ -s "$src" ] || { $LOG "No routes list"; exit 1; }
 
 want="/tmp/wg_client_routes_want"
+have="/tmp/wg_client_routes_have"
 dos2unix -u "$src" 2> /dev/null
-grep -oE '^([0-9]+\.){3}[0-9]+(/[0-9]+)?' "$src" | sort -u > "$want"
-touch "$applied"
+# /32 ядро показывает без маски — приводим список к тому же виду
+grep -oE '^([0-9]+\.){3}[0-9]+(/[0-9]+)?' "$src" | sed 's#/32$##' | sort -u > "$want"
+# что стоит на интерфейсе СЕЙЧАС (наши маршруты — с метрикой $wgmetric): сверяемся с ядром, а не с записью прошлого
+# запуска — после перезапуска WireGuard маршруты на интерфейсе исчезают, и refresh должен их вернуть
+ip -4 route show dev "$iface" 2> /dev/null | grep -E "metric $wgmetric( |$)" | awk '{print $1}' | sort -u > "$have"
 
-# 2. новые маршруты — добавить, ушедшие из списка — снять
+# 2. недостающие маршруты — добавить, ушедшие из списка — снять
 added=0; removed=0
-for dest in $(grep -vxFf "$applied" "$want"); do
+for dest in $(grep -vxFf "$have" "$want"); do
   ip -4 route replace "$dest" dev "$iface" metric "$wgmetric" && added=$((added + 1))
 done
-for dest in $(grep -vxFf "$want" "$applied"); do
-  ip -4 route del "$dest" dev "$iface" 2> /dev/null && removed=$((removed + 1))
+for dest in $(grep -vxFf "$want" "$have"); do
+  ip -4 route del "$dest" dev "$iface" metric "$wgmetric" 2> /dev/null && removed=$((removed + 1))
 done
-mv -f "$want" "$applied"
-$LOG "Routes: added $added, removed $removed, total $(wc -l < "$applied")"
+$LOG "Routes: added $added, removed $removed, in list $(wc -l < "$want")"
+rm -f "$want" "$have"
 
 # 3. обновление списка раз в 6 ч: задание cron (файл заданий прошивка может пересоздать — ставим при каждом запуске)
 if ! grep -qF "$self refresh" "$crontab" 2> /dev/null; then
