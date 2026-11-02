@@ -78,4 +78,19 @@ elif ! pidof crond > /dev/null; then
   service crontab restart > /dev/null 2>&1
 fi
 
+# 4. аппаратный сторож (03.11.2026): служба прошивки /etc/init.d/watchdog не подключает global.sh и при загрузке падает
+#    на «modload: not found» — сторож не запускался никогда. Запускаем сами, с теми же параметрами, если WatchdogEnabled=1:
+#    роутер перезагрузится, только если зависнет (таймер не сбрасывается 120 с). Без -F BusyBox watchdog уходит в фон сам.
+#    Выключать: nvram_set WatchdogEnabled 0 и перезагрузка (/etc/init.d/watchdog stop убивает сам себя, драйвер остаётся).
+if [ "$(nvram_get WatchdogEnabled)" = "1" ] && ! pidof watchdog > /dev/null; then
+  modload ralink_wdt > /dev/null 2>&1
+  sleep 1
+  if [ -c /dev/watchdog ]; then
+    nice -n -10 watchdog -T 120 -t 10 /dev/watchdog < /dev/null > /dev/null 2>&1
+    $LOG "Hardware watchdog started"
+  else
+    $LOG "Hardware watchdog: no /dev/watchdog after loading ralink_wdt"
+  fi
+fi
+
 $LOG "WireGuard custom routes: finished"
