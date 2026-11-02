@@ -17,6 +17,9 @@ self="/pss/wg-up.d/10-custom-routes"
 crontab="/etc/crontabs/root"
 min_routes=50
 
+# строки из файла $2, которых нет в файле $1 (grep -vxFf в BusyBox при ПУСТОМ файле шаблонов отбрасывает всё — 03.11)
+missing() { awk -v f="$1" 'BEGIN { while ((getline l < f) > 0) h[l] = 1 } !($0 in h)' "$2"; }
+
 is_up() { ip link show "$iface" 2> /dev/null | grep -qE '[<,]UP[,>]'; }
 
 $LOG "WireGuard custom routes: started${1:+ ($1)}"
@@ -55,10 +58,10 @@ ip -4 route show dev "$iface" 2> /dev/null | grep -E "metric $wgmetric( |$)" | a
 
 # 2. недостающие маршруты — добавить, ушедшие из списка — снять
 added=0; removed=0
-for dest in $(grep -vxFf "$have" "$want"); do
+for dest in $(missing "$have" "$want"); do
   ip -4 route replace "$dest" dev "$iface" metric "$wgmetric" && added=$((added + 1))
 done
-for dest in $(grep -vxFf "$want" "$have"); do
+for dest in $(missing "$want" "$have"); do
   ip -4 route del "$dest" dev "$iface" metric "$wgmetric" 2> /dev/null && removed=$((removed + 1))
 done
 $LOG "Routes: added $added, removed $removed, in list $(wc -l < "$want")"
